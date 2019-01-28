@@ -92,15 +92,20 @@ class Source(Base):
     def process_candidates(self):
         candidates = []
         results = self.vim.vars['deoplete#source#vim_lsp#_results']
-        if isinstance(results, dict):
-            if 'items' not in results:
-                self.print_error(
-                    'LSP results does not have "items" key:{}'.format(
-                        str(results)))
-                return
-            items = results['items']
-        else:
-            items = results
+
+        if not isinstance(results, dict):
+            return candidates
+
+        if 'items' not in results:
+            self.print_error(
+                'LSP results does not have "items" key:{}'.format(
+                    str(results)))
+            return candidates
+
+        items = results['items']
+        if items is None:
+            return candidates
+
         for rec in items:
             if rec.get('insertText', ''):
                 if rec.get('insertTextFormat', 0) != 1:
