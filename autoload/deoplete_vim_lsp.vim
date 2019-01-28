@@ -1,8 +1,3 @@
-if exists('g:deoplete_vim_lsp')
-    finish
-endif
-let g:deoplete_vim_lsp = 1
-
 func! deoplete_vim_lsp#request(server_name, opt, ctx) abort
    call s:completor(a:server_name, a:opt, a:ctx)
 endfunc
@@ -27,4 +22,3 @@ function! s:handle_completion(server_name, opt, ctx, data) abort
     let g:deoplete#source#vim_lsp#_requested = 1
     let g:deoplete#source#vim_lsp#_results = l:result
 endfunction
-
