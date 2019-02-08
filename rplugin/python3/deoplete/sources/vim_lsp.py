@@ -126,6 +126,7 @@ class Source(Base):
 
             if 'detail' in rec and rec['detail']:
                 item['info'] = rec['detail']
+                item['menu'] = rec['detail']
 
             candidates.append(item)
 
