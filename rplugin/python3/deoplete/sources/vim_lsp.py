@@ -126,7 +126,8 @@ class Source(Base):
 
             if 'detail' in rec and rec['detail']:
                 item['info'] = rec['detail']
-                item['menu'] = rec['detail']
+                if self.vim.vars['deoplete#sources#vim_lsp#show_info']:
+                    item['menu'] = rec['detail']
 
             candidates.append(item)
 
