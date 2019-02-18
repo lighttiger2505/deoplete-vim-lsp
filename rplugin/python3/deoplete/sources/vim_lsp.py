@@ -93,16 +93,23 @@ class Source(Base):
         candidates = []
         results = self.vim.vars['deoplete#source#vim_lsp#_results']
 
-        if not isinstance(results, dict):
+        # response is `CompletionList`
+        if isinstance(results, dict):
+            if 'items' not in results:
+                self.print_error(
+                    'LSP results does not have "items" key:{}'.format(
+                        str(results)))
+                return candidates
+            items = results['items']
+
+        # response is `CompletionItem[]`
+        elif isinstance(results, list):
+            items = results
+
+        # invalid response
+        else:
             return candidates
 
-        if 'items' not in results:
-            self.print_error(
-                'LSP results does not have "items" key:{}'.format(
-                    str(results)))
-            return candidates
-
-        items = results['items']
         if items is None:
             return candidates
 
