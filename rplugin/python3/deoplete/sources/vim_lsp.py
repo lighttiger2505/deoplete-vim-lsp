@@ -33,65 +33,54 @@ LSP_KINDS = [
 
 class Source(Base):
     def __init__(self, vim):
-        Base.__init__(self, vim)
+        super().__init__(vim)
 
         self.name = 'lsp'
         self.mark = '[lsp]'
         self.rank = 500
         self.input_pattern = r'[^\w\s]$'
+        self.is_volatile = True
         self.vars = {}
-        self.vim.vars['deoplete#source#vim_lsp#_results'] = []
-        self.vim.vars['deoplete#source#vim_lsp#_requested'] = False
-
+        self.current_input = ''
         self.server_names = None
         self.server_capabilities = {}
         self.server_infos = {}
 
     def gather_candidates(self, context):
-        if not self.server_names:
-            self.server_names = self.vim.call('lsp#get_server_names')
+        self.init()
 
         for server_name in self.server_names:
-            if server_name not in self.server_capabilities:
-                self.server_capabilities[server_name] = self.vim.call(
-                    'lsp#get_server_capabilities', server_name)
-            if not self.server_capabilities[server_name].get(
-                    'completionProvider', False):
-                continue
-
-            if server_name not in self.server_infos:
-                self.server_infos[server_name] = self.vim.call(
-                    'lsp#get_server_info', server_name)
-
-            filetype = context['filetype']
             server_info = self.server_infos[server_name]
             if server_info.get('whitelist', []):
-                if filetype not in server_info['whitelist']:
+                if context['filetype'] not in server_info['whitelist']:
                     continue
             if server_info.get('blacklist', []):
-                if filetype in server_info['blacklist']:
+                if context['filetype'] in server_info['blacklist']:
                     continue
 
-            if context['is_async']:
-                if self.vim.vars['deoplete#source#vim_lsp#_requested']:
-                    context['is_async'] = False
-                    return self.process_candidates()
+            # request.
+            if self.current_input is not context['input']:
+                self.current_input = context['input']
+                context['is_async'] = True
+                self.vim.call(
+                    'deoplete_vim_lsp#request',
+                    server_name,
+                    create_option_to_vimlsp(server_name),
+                    create_context_to_vimlsp(context),
+                )
                 return []
 
-            self.vim.vars['deoplete#source#vim_lsp#_requested'] = False
-            context['is_async'] = True
+            # process.
+            if context['is_async'] and self.vim.call('deoplete_vim_lsp#is_finished'):
+                self.current_input = ''
+                context['is_async'] = False
+                return self.process_candidates()
 
-            self.vim.call(
-                'deoplete_vim_lsp#request',
-                server_name,
-                create_option_to_vimlsp(server_name),
-                create_context_to_vimlsp(context),
-            )
         return []
 
     def process_candidates(self):
         candidates = []
-        results = self.vim.vars['deoplete#source#vim_lsp#_results']
+        results = self.vim.vars['deoplete#sources#vim_lsp#_results']
 
         # response is `CompletionList`
         if isinstance(results, dict):
@@ -139,6 +128,22 @@ class Source(Base):
             candidates.append(item)
 
         return candidates
+
+    def init(self):
+        if not self.server_names:
+            self.server_names = self.vim.call('lsp#get_server_names')
+
+        for server_name in self.server_names:
+            if server_name not in self.server_capabilities:
+                self.server_capabilities[server_name] = self.vim.call(
+                    'lsp#get_server_capabilities', server_name)
+            if not self.server_capabilities[server_name].get(
+                    'completionProvider', False):
+                continue
+
+            if server_name not in self.server_infos:
+                self.server_infos[server_name] = self.vim.call(
+                    'lsp#get_server_info', server_name)
 
 
 def create_option_to_vimlsp(server_name):
