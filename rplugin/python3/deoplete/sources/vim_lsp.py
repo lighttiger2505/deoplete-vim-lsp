@@ -38,8 +38,9 @@ class Source(Base):
         self.name = 'lsp'
         self.mark = '[lsp]'
         self.rank = 500
-        self.input_pattern = r'[^\w\s]$'
+        self.input_pattern = r'[^\s]$'
         self.is_volatile = True
+        self.min_pattern_length = 1
         self.vars = {}
         self.current_input = ''
         self.server_names = None
@@ -47,9 +48,26 @@ class Source(Base):
         self.server_infos = {}
 
     def gather_candidates(self, context):
-        self.init()
+        # init `self.server_names`
+        if not self.server_names:
+            self.server_names = self.vim.call('lsp#get_server_names')
 
         for server_name in self.server_names:
+            # init `self.server_capabilities`
+            for server_name in self.server_names:
+                if server_name not in self.server_capabilities:
+                    self.server_capabilities[server_name] = self.vim.call(
+                        'lsp#get_server_capabilities', server_name)
+                if not self.server_capabilities[server_name].get(
+                        'completionProvider', False):
+                    continue
+
+            # init `self.server_infos`
+            if server_name not in self.server_infos:
+                self.server_infos[server_name] = self.vim.call(
+                    'lsp#get_server_info', server_name)
+
+            # check filetype
             server_info = self.server_infos[server_name]
             if server_info.get('whitelist', []):
                 if context['filetype'] not in server_info['whitelist']:
@@ -58,7 +76,12 @@ class Source(Base):
                 if context['filetype'] in server_info['blacklist']:
                     continue
 
-            # request.
+            # gather completion results if finished async process
+            if context['is_async'] and self.vim.call('deoplete_vim_lsp#is_finished'):
+                context['is_async'] = False
+                return self.process_candidates()
+
+            # request if input changed
             if self.current_input is not context['input']:
                 self.current_input = context['input']
                 context['is_async'] = True
@@ -68,13 +91,7 @@ class Source(Base):
                     create_option_to_vimlsp(server_name),
                     create_context_to_vimlsp(context),
                 )
-                return []
-
-            # process.
-            if context['is_async'] and self.vim.call('deoplete_vim_lsp#is_finished'):
-                self.current_input = ''
-                context['is_async'] = False
-                return self.process_candidates()
+            return []
 
         return []
 
@@ -128,22 +145,6 @@ class Source(Base):
             candidates.append(item)
 
         return candidates
-
-    def init(self):
-        if not self.server_names:
-            self.server_names = self.vim.call('lsp#get_server_names')
-
-        for server_name in self.server_names:
-            if server_name not in self.server_capabilities:
-                self.server_capabilities[server_name] = self.vim.call(
-                    'lsp#get_server_capabilities', server_name)
-            if not self.server_capabilities[server_name].get(
-                    'completionProvider', False):
-                continue
-
-            if server_name not in self.server_infos:
-                self.server_infos[server_name] = self.vim.call(
-                    'lsp#get_server_info', server_name)
 
 
 def create_option_to_vimlsp(server_name):
