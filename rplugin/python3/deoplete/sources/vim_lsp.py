@@ -41,6 +41,7 @@ class Source(Base):
         self.input_pattern = r'[^\w\s]$'
         self.vars = {}
         self.vim.vars['deoplete#source#vim_lsp#_results'] = []
+        self.vim.vars['deoplete#source#vim_lsp#_context'] = {}
         self.vim.vars['deoplete#source#vim_lsp#_requested'] = False
 
         self.server_names = None
@@ -74,10 +75,17 @@ class Source(Base):
 
             if context['is_async']:
                 if self.vim.vars['deoplete#source#vim_lsp#_requested']:
-                    context['is_async'] = False
-                    return self.process_candidates()
+                    if match_context(context,
+                                     self.vim.vars['deoplete#source#vim_lsp#_context']):
+                        context['is_async'] = False
+                        return self.process_candidates()
+                    self.request_lsp_completion(server_name, context)
                 return []
 
+            self.request_lsp_completion(server_name, context)
+        return []
+
+    def request_lsp_completion(self, server_name, context):
             self.vim.vars['deoplete#source#vim_lsp#_requested'] = False
             context['is_async'] = True
 
@@ -87,7 +95,6 @@ class Source(Base):
                 create_option_to_vimlsp(server_name),
                 create_context_to_vimlsp(context),
             )
-        return []
 
     def process_candidates(self):
         candidates = []
@@ -156,3 +163,17 @@ def create_context_to_vimlsp(context):
         'filetype': context['filetype'],
         'filepath': context['bufpath']
     }
+
+
+def match_context(deoplete_context, vim_lsp_context):
+    position_key_deoplete = '{}:{}'.format(
+        deoplete_context['position'][1],
+        deoplete_context['position'][2],
+    )
+    position_key_lsp = '{}:{}'.format(
+        vim_lsp_context['lnum'],
+        vim_lsp_context['col'],
+    )
+    if position_key_deoplete == position_key_lsp:
+        return True
+    return False

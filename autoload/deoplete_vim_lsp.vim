@@ -18,6 +18,9 @@ function! s:handle_completion(server_name, opt, ctx, data) abort
         return
     endif
 
+    let l:ctx = a:ctx
+    let g:deoplete#source#vim_lsp#_context = l:ctx
+
     let l:result = a:data['response']['result']
     let g:deoplete#source#vim_lsp#_requested = 1
     let g:deoplete#source#vim_lsp#_results = l:result
