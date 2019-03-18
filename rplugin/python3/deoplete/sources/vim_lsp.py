@@ -83,6 +83,9 @@ class Source(Base):
                 return []
 
             self.request_lsp_completion(server_name, context)
+            return []
+
+        context['is_async'] = False
         return []
 
     def request_lsp_completion(self, server_name, context):
