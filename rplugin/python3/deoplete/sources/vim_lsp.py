@@ -50,7 +50,7 @@ class Source(Base):
 
     def gather_candidates(self, context):
         if not self.server_names:
-            self.server_names = self.vim.call('lsp#get_server_names')
+            self.server_names = self.vim.call('lsp#get_whitelisted_servers')
 
         for server_name in self.server_names:
             if server_name not in self.server_capabilities:
@@ -59,19 +59,6 @@ class Source(Base):
             if not self.server_capabilities[server_name].get(
                     'completionProvider', False):
                 continue
-
-            if server_name not in self.server_infos:
-                self.server_infos[server_name] = self.vim.call(
-                    'lsp#get_server_info', server_name)
-
-            filetype = context['filetype']
-            server_info = self.server_infos[server_name]
-            if server_info.get('whitelist', []):
-                if filetype not in server_info['whitelist']:
-                    continue
-            if server_info.get('blacklist', []):
-                if filetype in server_info['blacklist']:
-                    continue
 
             if context['is_async']:
                 if self.vim.vars['deoplete#source#vim_lsp#_requested']:
