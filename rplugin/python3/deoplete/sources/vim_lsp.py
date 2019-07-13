@@ -39,6 +39,7 @@ class Source(Base):
         self.mark = '[lsp]'
         self.rank = 500
         self.input_pattern = r'[^\w\s]$'
+        self.evnets = ['BufEnter']
         self.vars = {}
         self.vim.vars['deoplete#source#vim_lsp#_results'] = []
         self.vim.vars['deoplete#source#vim_lsp#_context'] = {}
@@ -47,10 +48,16 @@ class Source(Base):
         self.server_names = None
         self.server_capabilities = {}
         self.server_infos = {}
+        self.buf_changed = False
+
+    def on_event(self, context):
+        if context['event'] == 'BufEnter':
+            self.buf_changed = True
 
     def gather_candidates(self, context):
-        if not self.server_names:
+        if not self.server_names or self.buf_changed:
             self.server_names = self.vim.call('lsp#get_whitelisted_servers')
+            self.buf_changed = False
 
         for server_name in self.server_names:
             if server_name not in self.server_capabilities:
