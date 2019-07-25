@@ -76,15 +76,15 @@ class Source(Base):
         return []
 
     def request_lsp_completion(self, server_name, context):
-            self.vim.vars['deoplete#source#vim_lsp#_requested'] = False
-            context['is_async'] = True
+        self.vim.vars['deoplete#source#vim_lsp#_requested'] = False
+        context['is_async'] = True
 
-            self.vim.call(
-                'deoplete_vim_lsp#request',
-                server_name,
-                create_option_to_vimlsp(server_name),
-                create_context_to_vimlsp(context),
-            )
+        self.vim.call(
+            'deoplete_vim_lsp#request',
+            server_name,
+            create_option_to_vimlsp(server_name),
+            create_context_to_vimlsp(context),
+        )
 
     def process_candidates(self):
         candidates = []
