@@ -39,7 +39,7 @@ class Source(Base):
         self.mark = '[lsp]'
         self.rank = 500
         self.input_pattern = r'[^\w\s]$'
-        self.evnets = ['BufEnter']
+        self.events = ['BufEnter']
         self.vars = {}
         self.vim.vars['deoplete#source#vim_lsp#_results'] = []
         self.vim.vars['deoplete#source#vim_lsp#_context'] = {}
