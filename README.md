@@ -8,6 +8,7 @@ deoplete source for vim-lsp
 
 - [deoplete.nvim](https://github.com/Shougo/deoplete.nvim)
 - [vim-lsp](https://github.com/prabirshrestha/vim-lsp)
+- [async.vim](https://github.com/prabirshrestha/async.vim)
 
 ### .vimrc
 
