@@ -1,6 +1,8 @@
 import re
+import time
 
 from deoplete.source.base import Base
+
 
 LSP_KINDS = [
     'Text',
@@ -50,6 +52,7 @@ class Source(Base):
         self.server_infos = {}
         self.buf_changed = False
 
+
     def on_event(self, context):
         if context['event'] == 'BufEnter':
             self.buf_changed = True
@@ -67,24 +70,56 @@ class Source(Base):
                     'completionProvider', False):
                 continue
 
-            if context['is_async']:
-                if self.vim.vars['deoplete#source#vim_lsp#_requested']:
-                    if match_context(context,
-                                     self.vim.vars['deoplete#source#vim_lsp#_context']):
-                        context['is_async'] = False
-                        return self.process_candidates()
-                    self.request_lsp_completion(server_name, context)
-                return []
+            if self.is_auto_complete():
+                return self.async_completion(server_name, context)
 
-            self.request_lsp_completion(server_name, context)
-            return []
+            return self.sync_completion(server_name, context)
 
-        context['is_async'] = False
         return []
 
-    def request_lsp_completion(self, server_name, context):
+    def sync_completion(self, server_name, context):
+        self.request_lsp_completion(server_name, context, False)
+        cnt = 0
+        while True:
+            cnt += 1
+            if cnt > 10:
+                # request timeout
+                break
+            if self.vim.vars['deoplete#source#vim_lsp#_requested']:
+                if match_context(
+                        context,
+                        self.vim.vars['deoplete#source#vim_lsp#_context']
+                ):
+                    context['is_async'] = False
+                    return self.process_candidates()
+            time.sleep(0.01)
+        return []
+
+    def async_completion(self, server_name, context):
+        # Async
+        if context['is_async']:
+            if self.vim.vars['deoplete#source#vim_lsp#_requested']:
+                if match_context(
+                        context,
+                        self.vim.vars['deoplete#source#vim_lsp#_context']
+                ):
+                    context['is_async'] = False
+                    # self.vim.call('deoplete#auto_complete')
+                    return self.process_candidates()
+
+                # old position completion
+                self.request_lsp_completion(server_name, context, True)
+
+            # dissmiss completion
+            return []
+
+        # request language server
+        self.request_lsp_completion(server_name, context, True)
+        return []
+
+    def request_lsp_completion(self, server_name, context, is_async):
         self.vim.vars['deoplete#source#vim_lsp#_requested'] = False
-        context['is_async'] = True
+        context['is_async'] = is_async
 
         self.vim.call(
             'deoplete_vim_lsp#request',
@@ -141,8 +176,13 @@ class Source(Base):
                     item['menu'] = rec['detail']
 
             candidates.append(item)
-
         return candidates
+
+    def is_auto_complete(self):
+        return self.vim.call(
+            'deoplete#custom#_get_option',
+            'auto_complete',
+        )
 
 
 def create_option_to_vimlsp(server_name):
