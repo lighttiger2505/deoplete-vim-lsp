@@ -40,6 +40,7 @@ class Source(Base):
         self.name = 'lsp'
         self.mark = '[lsp]'
         self.rank = 500
+        self.is_volatile = True
         self.input_pattern = r'[^\w\s]$'
         self.events = ['BufEnter']
         self.vars = {}
@@ -72,13 +73,12 @@ class Source(Base):
 
             if self.is_auto_complete():
                 return self.async_completion(server_name, context)
-
             return self.sync_completion(server_name, context)
 
         return []
 
     def sync_completion(self, server_name, context):
-        self.request_lsp_completion(server_name, context, False)
+        self.request_lsp_completion(server_name, context)
         cnt = 0
         while True:
             cnt += 1
@@ -90,36 +90,26 @@ class Source(Base):
                         context,
                         self.vim.vars['deoplete#source#vim_lsp#_context']
                 ):
-                    context['is_async'] = False
                     return self.process_candidates()
             time.sleep(0.01)
         return []
 
     def async_completion(self, server_name, context):
-        # Async
-        if context['is_async']:
-            if self.vim.vars['deoplete#source#vim_lsp#_requested']:
-                if match_context(
-                        context,
-                        self.vim.vars['deoplete#source#vim_lsp#_context']
-                ):
-                    context['is_async'] = False
-                    # self.vim.call('deoplete#auto_complete')
-                    return self.process_candidates()
+        if self.vim.vars['deoplete#source#vim_lsp#_requested']:
+            if match_context(
+                    context,
+                    self.vim.vars['deoplete#source#vim_lsp#_context']
+            ):
+                return self.process_candidates()
+            # old position completion
+            self.request_lsp_completion(server_name, context)
 
-                # old position completion
-                self.request_lsp_completion(server_name, context, True)
-
-            # dissmiss completion
-            return []
-
-        # request language server
-        self.request_lsp_completion(server_name, context, True)
+        # dissmiss completion
+        self.request_lsp_completion(server_name, context)
         return []
 
-    def request_lsp_completion(self, server_name, context, is_async):
+    def request_lsp_completion(self, server_name, context):
         self.vim.vars['deoplete#source#vim_lsp#_requested'] = False
-        context['is_async'] = is_async
 
         self.vim.call(
             'deoplete_vim_lsp#request',
