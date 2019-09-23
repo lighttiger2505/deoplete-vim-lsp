@@ -24,4 +24,7 @@ function! s:handle_completion(server_name, opt, ctx, data) abort
     let l:result = a:data['response']['result']
     let g:deoplete#source#vim_lsp#_requested = 1
     let g:deoplete#source#vim_lsp#_results = l:result
+    if index(['i', 'ic', 'ix'], mode()) >= 0
+        call deoplete#auto_complete()
+    endif
 endfunction
