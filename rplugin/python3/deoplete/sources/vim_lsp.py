@@ -152,7 +152,7 @@ class Source(Base):
                 word = rec.get('entryName', rec.get('label'))
 
             item = {
-                'word': re.sub(r'\([^)]*\)', '', word),
+                'word': re.split("[\( ]", word)[0],
                 'abbr': rec['label'],
                 'dup': 0,
             }
