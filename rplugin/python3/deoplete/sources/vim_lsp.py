@@ -157,7 +157,7 @@ class Source(Base):
                 'dup': 0,
             }
 
-            if 'kind' in rec:
+            if isinstance(rec.get('kind'), int):
                 item['kind'] = LSP_KINDS[rec['kind'] - 1]
 
             if 'detail' in rec and rec['detail']:
