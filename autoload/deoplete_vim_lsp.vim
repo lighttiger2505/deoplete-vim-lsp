@@ -20,8 +20,19 @@ function! s:handle_completion(server_name, opt, ctx, data) abort
 
     let l:ctx = a:ctx
     let g:deoplete#source#vim_lsp#_context = l:ctx
-
     let l:result = a:data['response']['result']
+
+    " for register vim-lsp managed user data
+    if type(l:result) == type([])
+        let l:items = copy(l:result)
+    elseif type(l:result) == type({})
+        let l:items = copy(l:result['items'])
+    else
+        let l:items = []
+    endif
+    call map(l:items, 'lsp#omni#get_vim_completion_item(v:val, a:server_name)')
+
+    " pass to deoplete reference variable and call completion
     let g:deoplete#source#vim_lsp#_requested = 1
     let g:deoplete#source#vim_lsp#_results = l:result
     if index(['i', 'ic', 'ix'], mode()) >= 0
