@@ -44,7 +44,7 @@ class Source(Base):
         self.input_pattern = r'[^\w\s]$'
         self.events = ['BufEnter']
         self.vars = {}
-        self.vim.vars['deoplete#source#vim_lsp#_results'] = []
+        self.vim.vars['deoplete#source#vim_lsp#_items'] = []
         self.vim.vars['deoplete#source#vim_lsp#_context'] = {}
         self.vim.vars['deoplete#source#vim_lsp#_requested'] = False
 
@@ -100,7 +100,7 @@ class Source(Base):
                     context,
                     self.vim.vars['deoplete#source#vim_lsp#_context']
             ):
-                return self.process_candidates()
+                return self.vim.vars['deoplete#source#vim_lsp#_items']
             # old position completion
             self.request_lsp_completion(server_name, context)
 
@@ -117,56 +117,6 @@ class Source(Base):
             create_option_to_vimlsp(server_name),
             create_context_to_vimlsp(context),
         )
-
-    def process_candidates(self):
-        candidates = []
-        results = self.vim.vars['deoplete#source#vim_lsp#_results']
-
-        # response is `CompletionList`
-        if isinstance(results, dict):
-            if 'items' not in results:
-                self.print_error(
-                    'LSP results does not have "items" key:{}'.format(
-                        str(results)))
-                return candidates
-            items = results['items']
-
-        # response is `CompletionItem[]`
-        elif isinstance(results, list):
-            items = results
-
-        # invalid response
-        else:
-            return candidates
-
-        if items is None:
-            return candidates
-
-        for rec in items:
-            if rec.get('insertText', ''):
-                if rec.get('insertTextFormat', 0) != 1:
-                    word = rec.get('entryName', rec.get('label'))
-                else:
-                    word = rec['insertText']
-            else:
-                word = rec.get('entryName', rec.get('label'))
-
-            item = {
-                'word': re.sub(r'\([^)]*\)', '', word),
-                'abbr': rec['label'],
-                'dup': 0,
-            }
-
-            if isinstance(rec.get('kind'), int):
-                item['kind'] = LSP_KINDS[rec['kind'] - 1]
-
-            if 'detail' in rec and rec['detail']:
-                item['info'] = rec['detail']
-                if self.vim.vars['deoplete#sources#vim_lsp#show_info']:
-                    item['menu'] = rec['detail']
-
-            candidates.append(item)
-        return candidates
 
     def is_auto_complete(self):
         return self.vim.call(
