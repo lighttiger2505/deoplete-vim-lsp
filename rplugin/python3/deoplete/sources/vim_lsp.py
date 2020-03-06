@@ -3,6 +3,20 @@ import time
 
 from deoplete.source.base import Base
 
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+# create file handler which logs even DEBUG messages
+fh = logging.FileHandler('deoplete-vim-lsp.log')
+fh.setLevel(logging.DEBUG)
+fh_formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
+fh.setFormatter(fh_formatter)
+
+# add the handlers to the logger
+logger.addHandler(fh)
+
 
 LSP_KINDS = [
     'Text',
@@ -59,6 +73,7 @@ class Source(Base):
             self.buf_changed = True
 
     def gather_candidates(self, context):
+        logger.info("gather_candidates")
         if not self.server_names or self.buf_changed:
             self.server_names = self.vim.call('lsp#get_whitelisted_servers')
             self.buf_changed = False
@@ -100,11 +115,16 @@ class Source(Base):
                     context,
                     self.vim.vars['deoplete#source#vim_lsp#_context']
             ):
+                # import pprint
+                # logger.info(pprint.pformat(self.vim.vars['deoplete#source#vim_lsp#_items']))
+                logger.info("completion")
                 return self.vim.vars['deoplete#source#vim_lsp#_items']
             # old position completion
+            logger.info("request_lsp_completion")
             self.request_lsp_completion(server_name, context)
 
         # dissmiss completion
+        logger.info("request_lsp_completion")
         self.request_lsp_completion(server_name, context)
         return []
 
