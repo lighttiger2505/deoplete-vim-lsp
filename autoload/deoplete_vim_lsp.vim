@@ -1,3 +1,9 @@
+function! deoplete_vim_lsp#log(...) abort
+    if !empty(g:deoplete#sources#vim_lsp#log)
+        call writefile([strftime('%c') . ':' . json_encode(a:000)], g:deoplete#sources#vim_lsp#log, 'a')
+    endif
+endfunction
+
 func! deoplete_vim_lsp#request(server_name, opt, ctx) abort
    call s:completor(a:server_name, a:opt, a:ctx)
 endfunc
@@ -18,11 +24,8 @@ function! s:handle_completion(server_name, opt, ctx, data) abort
         return
     endif
 
-    let l:ctx = a:ctx
-    let g:deoplete#source#vim_lsp#_context = l:ctx
-    let l:result = a:data['response']['result']
-
     " for register vim-lsp managed user data
+    let l:result = a:data['response']['result']
     if type(l:result) == type([])
         let l:items = copy(l:result)
     elseif type(l:result) == type({})
@@ -32,8 +35,8 @@ function! s:handle_completion(server_name, opt, ctx, data) abort
     endif
 
     " pass to deoplete reference variable and call completion
-    let g:deoplete#source#vim_lsp#_requested = 1
     let g:deoplete#source#vim_lsp#_items = map(l:items, 'lsp#omni#get_vim_completion_item(v:val, a:server_name)')
+    let g:deoplete#source#vim_lsp#_requested = 1
     if index(['i', 'ic', 'ix'], mode()) >= 0
         call deoplete#auto_complete()
     endif
