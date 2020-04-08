@@ -17,9 +17,10 @@ class Source(Base):
         self.vars = {}
         self.vim.vars['deoplete#source#vim_lsp#_items'] = []
         self.vim.vars['deoplete#source#vim_lsp#_context'] = {}
-        self.vim.vars['deoplete#source#vim_lsp#_requested'] = False
+        self.vim.vars['deoplete#source#vim_lsp#_done'] = False
 
         self.prev_input = ''
+        self.requested = False
         self.server_names = None
         self.server_capabilities = {}
         self.server_infos = {}
@@ -59,7 +60,7 @@ class Source(Base):
             if cnt > 10:
                 # request timeout
                 break
-            if self.vim.vars['deoplete#source#vim_lsp#_requested']:
+            if self.vim.vars['deoplete#source#vim_lsp#_done']:
                 self.log('show completion')
                 context['is_async'] = False
                 return self.vim.vars['deoplete#source#vim_lsp#_items']
@@ -67,18 +68,28 @@ class Source(Base):
         return []
 
     def async_completion(self, server_name, context):
-        if self.vim.vars['deoplete#source#vim_lsp#_requested'] and context['input'] == self.prev_input:
+        if not self.requested:
+            self.request_lsp_completion(server_name, context)
+            return []
+
+        if context['input'] != self.prev_input:
+            self.request_lsp_completion(server_name, context)
+            return []
+
+        if self.vim.vars['deoplete#source#vim_lsp#_done'] and match_context(context, self.vim.vars['deoplete#source#vim_lsp#_context']):
             self.log('show completion')
             context['is_async'] = False
+            self.requested = False
             return self.vim.vars['deoplete#source#vim_lsp#_items']
-        self.request_lsp_completion(server_name, context)
+
         return []
 
     def request_lsp_completion(self, server_name, context):
         self.log('request completion')
 
-        self.vim.vars['deoplete#source#vim_lsp#_requested'] = False
+        self.vim.vars['deoplete#source#vim_lsp#_done'] = False
         self.prev_input = context['input']
+        self.requested = True
         context['is_async'] = True
         self.vim.call(
             'deoplete_vim_lsp#request',
@@ -114,3 +125,17 @@ def create_context_to_vimlsp(context):
         'filetype': context['filetype'],
         'filepath': context['bufpath']
     }
+
+
+def match_context(deoplete_context, vim_lsp_context):
+    position_key_deoplete = '{}:{}'.format(
+        deoplete_context['position'][1],
+        deoplete_context['position'][2],
+    )
+    position_key_lsp = '{}:{}'.format(
+        vim_lsp_context['lnum'],
+        vim_lsp_context['col'],
+    )
+    if position_key_deoplete == position_key_lsp:
+        return True
+    return False

@@ -36,7 +36,9 @@ function! s:handle_completion(server_name, opt, ctx, data) abort
 
     " pass to deoplete reference variable and call completion
     let g:deoplete#source#vim_lsp#_items = map(l:items, 'lsp#omni#get_vim_completion_item(v:val, a:server_name)')
-    let g:deoplete#source#vim_lsp#_requested = 1
+    let g:deoplete#source#vim_lsp#_done = 1
+    let l:ctx = a:ctx
+    let g:deoplete#source#vim_lsp#_context = l:ctx
     if index(['i', 'ic', 'ix'], mode()) >= 0
         call deoplete#auto_complete()
     endif
