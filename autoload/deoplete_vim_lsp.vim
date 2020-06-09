@@ -16,17 +16,17 @@ function! s:completor(server_name, opt, ctx) abort
         \   'textDocument': lsp#get_text_document_identifier(),
         \   'position': l:position,
         \ },
-        \ 'on_notification': function('s:handle_completion', [a:server_name, l:position, a:opt, a:ctx]),
+        \ 'on_notification': function('s:handle_completion', [l:server, l:position, a:opt, a:ctx]),
         \ })
 endfunction
 
-function! s:handle_completion(server_name, position, opt, ctx, data) abort
+function! s:handle_completion(server, position, opt, ctx, data) abort
     if lsp#client#is_error(a:data) || !has_key(a:data, 'response') || !has_key(a:data['response'], 'result')
         return
     endif
 
     let l:options = {
-        \ 'server': a:server_name,
+        \ 'server': a:server,
         \ 'position': a:position,
         \ 'response': a:data['response'],
         \ }
