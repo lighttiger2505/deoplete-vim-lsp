@@ -78,7 +78,6 @@ class Source(Base):
 
         if self.vim.vars['deoplete#source#vim_lsp#_done'] and match_context(context, self.vim.vars['deoplete#source#vim_lsp#_context']):
             self.log('show completion')
-            context['is_async'] = False
             self.requested = False
             return self.vim.vars['deoplete#source#vim_lsp#_items']
 
@@ -90,7 +89,6 @@ class Source(Base):
         self.vim.vars['deoplete#source#vim_lsp#_done'] = False
         self.prev_input = context['input']
         self.requested = True
-        context['is_async'] = True
         self.vim.call(
             'deoplete_vim_lsp#request',
             server_name,
