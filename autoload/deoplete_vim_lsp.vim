@@ -9,6 +9,7 @@ func! deoplete_vim_lsp#request(server_name, opt, ctx) abort
 endfunc
 
 function! s:completor(server_name, opt, ctx) abort
+    let l:server = lsp#get_server_info(a:server_name)
     let l:position = lsp#get_position()
     call lsp#send_request(a:server_name, {
         \ 'method': 'textDocument/completion',
@@ -16,17 +17,17 @@ function! s:completor(server_name, opt, ctx) abort
         \   'textDocument': lsp#get_text_document_identifier(),
         \   'position': l:position,
         \ },
-        \ 'on_notification': function('s:handle_completion', [a:server_name, l:position, a:opt, a:ctx]),
+        \ 'on_notification': function('s:handle_completion', [l:server, l:position, a:opt, a:ctx]),
         \ })
 endfunction
 
-function! s:handle_completion(server_name, position, opt, ctx, data) abort
+function! s:handle_completion(server, position, opt, ctx, data) abort
     if lsp#client#is_error(a:data) || !has_key(a:data, 'response') || !has_key(a:data['response'], 'result')
         return
     endif
 
     let l:options = {
-        \ 'server': a:server_name,
+        \ 'server': a:server,
         \ 'position': a:position,
         \ 'response': a:data['response'],
         \ }
