@@ -53,7 +53,7 @@ if (executable('pyls'))
         autocmd User lsp_setup call lsp#register_server({
       \ 'name': 'pyls',
       \ 'cmd': {server_info->['pyls']},
-      \ 'whitelist': ['python']
+      \ 'allowlist': ['python']
       \ })
     augroup END
 endif
@@ -65,7 +65,7 @@ if (executable('bingo'))
         autocmd User lsp_setup call lsp#register_server({
      \ 'name': 'go-lang',
      \ 'cmd': {server_info->['bingo', '-disable-func-snippet', '-mode', 'stdio']},
-     \ 'whitelist': ['go'],
+     \ 'allowlist': ['go'],
      \ })
     augroup END
 endif

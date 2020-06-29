@@ -35,7 +35,7 @@ class Source(Base):
         self.log("gather_candidates")
 
         if not self.server_names or self.buf_changed:
-            self.server_names = self.vim.call('lsp#get_whitelisted_servers')
+            self.server_names = self.vim.call('lsp#get_allowed_servers')
             self.buf_changed = False
 
         for server_name in self.server_names:
