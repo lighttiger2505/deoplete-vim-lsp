@@ -16,7 +16,6 @@ See [commit](https://github.com/Shougo/deoplete.nvim/commit/7f1d4d8b1f5dbf344f2d
 
 - [deoplete.nvim](https://github.com/Shougo/deoplete.nvim)
 - [vim-lsp](https://github.com/prabirshrestha/vim-lsp)
-- [async.vim](https://github.com/prabirshrestha/async.vim)
 
 ### .vimrc
 
@@ -24,7 +23,6 @@ For vim-plug
 
 ```vim
 Plug 'Shougo/deoplete.nvim'
-Plug 'prabirshrestha/async.vim'
 Plug 'prabirshrestha/vim-lsp'
 
 Plug 'lighttiger2505/deoplete-vim-lsp'
@@ -34,7 +32,6 @@ For dein.vim
 
 ```vim
 call dein#add('Shougo/deoplete.nvim')
-call dein#add('prabirshrestha/async.vim')
 call dein#add('prabirshrestha/vim-lsp')
 
 call dein#add('lighttiger2505/deoplete-vim-lsp')
