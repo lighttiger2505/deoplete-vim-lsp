@@ -39,7 +39,11 @@ class Source(Base):
             self.buf_changed = False
 
         for server_name in self.server_names:
+            # Check the server's capabilities
             if server_name not in self.server_capabilities:
+                # Capabilities can only be obtained when the server is running.
+                if self.vim.call('lsp#get_server_status', server_name) != 'running':
+                    continue
                 self.server_capabilities[server_name] = self.vim.call(
                     'lsp#get_server_capabilities', server_name)
             if not self.server_capabilities[server_name].get(
