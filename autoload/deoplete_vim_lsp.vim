@@ -37,7 +37,7 @@ function! s:handle_completion(server, position, opt, ctx, data) abort
     let l:ctx = a:ctx
     let g:deoplete#source#vim_lsp#_context = l:ctx
 
-    " if index(['i', 'ic', 'ix'], mode()) >= 0
-    "     call deoplete#auto_complete()
-    " endif
+    if index(['i', 'ic', 'ix'], mode()) >= 0
+        call deoplete#auto_complete()
+    endif
 endfunction
