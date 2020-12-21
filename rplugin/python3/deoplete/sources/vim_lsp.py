@@ -46,8 +46,10 @@ class Source(Base):
                     continue
                 self.server_capabilities[server_name] = self.vim.call(
                     'lsp#get_server_capabilities', server_name)
-            if not self.server_capabilities[server_name].get(
-                    'completionProvider', False):
+
+            completion_provider = self.server_capabilities[server_name].get(
+                    'completionProvider', False)
+            if completion_provider is False or completion_provider is None:
                 continue
 
             if self.is_auto_complete():
