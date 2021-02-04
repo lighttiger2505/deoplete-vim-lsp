@@ -19,7 +19,6 @@ class Source(Base):
         self.vim.vars['deoplete#source#vim_lsp#_context'] = {}
         self.vim.vars['deoplete#source#vim_lsp#_done'] = False
 
-        self.prev_input = ''
         self.requested = False
         self.server_names = None
         self.server_capabilities = {}
@@ -78,14 +77,11 @@ class Source(Base):
             self.request_lsp_completion(server_name, context)
             return []
 
-        if context['input'] != self.prev_input:
-            self.request_lsp_completion(server_name, context)
-            return []
-
-        if self.vim.vars['deoplete#source#vim_lsp#_done'] and match_context(context, self.vim.vars['deoplete#source#vim_lsp#_context']):
-            self.log('show completion')
-            self.requested = False
-            return self.vim.vars['deoplete#source#vim_lsp#_items']
+        if self.vim.vars['deoplete#source#vim_lsp#_done']:
+            if match_context(context, self.vim.vars['deoplete#source#vim_lsp#_context']):
+                self.log('show completion')
+                self.requested = False
+                return self.vim.vars['deoplete#source#vim_lsp#_items']
 
         return []
 
@@ -93,12 +89,10 @@ class Source(Base):
         self.log('request completion')
 
         self.vim.vars['deoplete#source#vim_lsp#_done'] = False
-        self.prev_input = context['input']
         self.requested = True
         self.vim.call(
             'deoplete_vim_lsp#request',
             server_name,
-            create_option_to_vimlsp(server_name),
             create_context_to_vimlsp(context),
         )
 
@@ -112,10 +106,6 @@ class Source(Base):
         if not self.vim.vars['deoplete#sources#vim_lsp#log']:
             return
         self.vim.call('deoplete_vim_lsp#log', val)
-
-
-def create_option_to_vimlsp(server_name):
-    return {'name': 'deoplete_lsp_{}'.format(server_name)}
 
 
 def create_context_to_vimlsp(context):
