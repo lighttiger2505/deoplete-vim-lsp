@@ -95,7 +95,7 @@ class Source(Base):
                 items = self.vim.vars['deoplete#source#vim_lsp#_items']
                 return items
             else:
-                self.log('unmatch completion')
+                self.log('unmatch context')
                 self.clean_state()
                 self.request_lsp_completion(server_name, context)
                 return []
@@ -140,13 +140,13 @@ class Source(Base):
             return False
 
         # start input
-        if not before_context['input'].startswith(context['input']):
+        if not context['input'].startswith(before_context['input']):
             return False
         # lnum
         if context['position'][1] != before_context['position'][1]:
             return False
         # column
-        if context['position'][2] > before_context['position'][2]:
+        if before_context['position'][2] > context['position'][2]:
             return False
         return True
 
