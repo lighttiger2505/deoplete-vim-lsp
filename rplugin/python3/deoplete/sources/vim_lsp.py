@@ -125,10 +125,12 @@ class Source(Base):
         self.vim.call('deoplete_vim_lsp#log', val)
 
     def trigger_characters(self, server_name):
-        default = ["."]
+        default = [".", " "]
         capabilities = self.server_capabilities[server_name]
         if capabilities:
-            return capabilities.get('trigger_characters', default)
+            trigger_characters = capabilities.get('trigger_characters', [])
+            trigger_characters.extend(default)
+            return trigger_characters
         return default
 
     def prev_input(self):
