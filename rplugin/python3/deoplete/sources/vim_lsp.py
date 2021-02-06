@@ -15,11 +15,11 @@ class Source(Base):
         self.input_pattern = r'[^\w\s]$'
         self.events = ['BufEnter']
         self.vars = {}
+
         self.vim.vars['deoplete#source#vim_lsp#_items'] = []
         self.vim.vars['deoplete#source#vim_lsp#_done'] = False
-
         self.requested = False
-        self.requested_context = {}
+        self.requested_context = None
 
         self.server_names = None
         self.server_capabilities = {}
@@ -60,7 +60,7 @@ class Source(Base):
         self.vim.vars['deoplete#source#vim_lsp#_items'] = []
         self.vim.vars['deoplete#source#vim_lsp#_done'] = False
         self.requested = False
-        self.requested_context = {}
+        self.requested_context = None
 
     def sync_completion(self, server_name, context):
         self.request_lsp_completion(server_name, context)
@@ -135,33 +135,37 @@ class Source(Base):
 
     def match_context(self, context):
         before_context = self.requested_context
+        if not before_context:
+            return False
 
         pattern = re.compile(r'\w+\Z')
-        beforeKw, afterKw = "", ""
-        m1 = pattern.search(before_context['input'])
-        if m1:
-            beforeKw = m1.group()
-        m2 = pattern.search(context['input'])
-        if m2:
-            afterKw = m2.group()
+        def keywd(typed):
+            match = pattern.search(typed)
+            if match:
+                return match.group()
+            return ""
+        beforeKw = keywd(before_context['input'])
+        afterKw = keywd(context['input'])
 
         self.log(str([
+            'before:',
             before_context['input'],
             beforeKw,
             before_context['position'][1],
             before_context['position'][2],
         ]))
         self.log(str([
+            'after :',
             context['input'],
             afterKw,
             context['position'][1],
             context['position'][2],
         ]))
-        if not before_context:
-            return False
 
         # start input
-        if not afterKw.startswith(beforeKw):
+        if (not beforeKw) and afterKw:
+            return False
+        if (beforeKw != afterKw) and (not afterKw.startswith(beforeKw)):
             return False
         # lnum
         if context['position'][1] != before_context['position'][1]:
