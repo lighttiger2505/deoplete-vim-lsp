@@ -26,15 +26,21 @@ function! s:handle_completion(server, position, data) abort
         return
     endif
 
-    let l:options = {
-        \ 'server': a:server,
-        \ 'position': a:position,
-        \ 'response': a:data['response'],
-        \ }
-    let g:deoplete#source#vim_lsp#_items = lsp#omni#get_vim_completion_items(l:options)['items']
-    let g:deoplete#source#vim_lsp#_done = 1
+    try
+        let l:options = {
+            \ 'server': a:server,
+            \ 'position': a:position,
+            \ 'response': a:data['response'],
+            \ }
+        let g:deoplete#source#vim_lsp#_items = lsp#omni#get_vim_completion_items(l:options)['items']
+        let g:deoplete#source#vim_lsp#_done = 1
 
-    if index(['i', 'ic', 'ix'], mode()) >= 0
-        call deoplete#auto_complete()
-    endif
+        if index(['i', 'ic', 'ix'], mode()) >= 0
+            call deoplete#auto_complete()
+        endif
+    catch
+        call deoplete_vim_lsp#log('handle error', v:exception, v:throwpoint)
+        let g:deoplete#source#vim_lsp#_items = []
+        let g:deoplete#source#vim_lsp#_done = 1
+    endtry
 endfunction
