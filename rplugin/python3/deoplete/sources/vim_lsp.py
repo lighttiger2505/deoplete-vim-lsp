@@ -32,8 +32,6 @@ class Source(Base):
             self.buf_changed = True
 
     def gather_candidates(self, context):
-        self.log("gather_candidates")
-
         if not self.server_names or self.buf_changed:
             self.server_names = self.vim.call('lsp#get_allowed_servers')
             self.buf_changed = False
@@ -73,7 +71,6 @@ class Source(Base):
                 # request timeout
                 break
             if self.vim.vars['deoplete#source#vim_lsp#_done']:
-                self.log('show completion')
                 context['is_async'] = False
                 return self.vim.vars['deoplete#source#vim_lsp#_items']
             time.sleep(0.01)
@@ -86,12 +83,12 @@ class Source(Base):
 
         now_input = context['input']
         if now_input != self.prev_input() and now_input[-1] in self.trigger_characters(server_name):
+            self.log('trigger characters')
             self.request_lsp_completion(server_name, context)
             return []
 
         if self.vim.vars['deoplete#source#vim_lsp#_done']:
             if self.match_context(context):
-                self.log('show completion')
                 items = self.vim.vars['deoplete#source#vim_lsp#_items']
                 return items
             else:
@@ -125,7 +122,7 @@ class Source(Base):
         self.vim.call('deoplete_vim_lsp#log', val)
 
     def trigger_characters(self, server_name):
-        default = [".", " "]
+        default = ["."]
         capabilities = self.server_capabilities[server_name]
         if capabilities:
             trigger_characters = capabilities.get('trigger_characters', [])
@@ -138,11 +135,33 @@ class Source(Base):
 
     def match_context(self, context):
         before_context = self.requested_context
+
+        pattern = re.compile(r'\w+\Z')
+        beforeKw, afterKw = "", ""
+        m1 = pattern.search(before_context['input'])
+        if m1:
+            beforeKw = m1.group()
+        m2 = pattern.search(context['input'])
+        if m2:
+            afterKw = m2.group()
+
+        self.log(str([
+            before_context['input'],
+            beforeKw,
+            before_context['position'][1],
+            before_context['position'][2],
+        ]))
+        self.log(str([
+            context['input'],
+            afterKw,
+            context['position'][1],
+            context['position'][2],
+        ]))
         if not before_context:
             return False
 
         # start input
-        if not context['input'].startswith(before_context['input']):
+        if not afterKw.startswith(beforeKw):
             return False
         # lnum
         if context['position'][1] != before_context['position'][1]:
