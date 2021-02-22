@@ -82,7 +82,7 @@ class Source(Base):
             return []
 
         now_input = context['input']
-        if now_input != self.prev_input() and now_input[-1] in self.trigger_characters(server_name):
+        if now_input != self.prev_input() and len(now_input) and now_input[-1] in self.trigger_characters(server_name):
             self.log('trigger characters')
             self.request_lsp_completion(server_name, context)
             return []
