@@ -15,21 +15,16 @@ class Source(Base):
         self.events = ['BufEnter']
         self.vars = {}
 
-        self.vim.vars['deoplete#source#vim_lsp#_items'] = []
-        self.vim.vars['deoplete#source#vim_lsp#_done'] = False
-        self.requested = False
-        self.requested_context = None
-
         self.server_names = None
         self.server_capabilities = {}
-        self.server_infos = {}
-
+        self.clean_state()
 
     def on_event(self, context):
         if context['event'] == 'BufEnter':
             # Refetch so a restarted server's trigger characters take effect.
             self.server_names = None
             self.server_capabilities = {}
+            self.clean_state()
 
     def get_input_pattern(self, filetype):
         if self.input_pattern or self.input_patterns:
@@ -70,10 +65,8 @@ class Source(Base):
         return []
 
     def clean_state(self):
-        self.vim.vars['deoplete#source#vim_lsp#_items'] = []
-        self.vim.vars['deoplete#source#vim_lsp#_done'] = False
-        self.requested = False
         self.requested_context = None
+        self.vim.call('deoplete_vim_lsp#clear')
 
     def sync_completion(self, server_name, context):
         self.request_lsp_completion(server_name, context)
@@ -90,7 +83,7 @@ class Source(Base):
         return []
 
     def async_completion(self, server_name, context):
-        if not self.requested:
+        if not self.match_context(context):
             self.request_lsp_completion(server_name, context)
             return []
 
@@ -101,12 +94,12 @@ class Source(Base):
             return []
 
         if self.vim.vars['deoplete#source#vim_lsp#_done']:
-            if self.match_context(context):
+            if (now_input == self.prev_input() or not
+                    self.vim.vars['deoplete#source#vim_lsp#_incomplete']):
                 items = self.vim.vars['deoplete#source#vim_lsp#_items']
                 return items
             else:
-                self.log('unmatch context')
-                self.clean_state()
+                self.log('incomplete response')
                 self.request_lsp_completion(server_name, context)
                 return []
 
@@ -115,8 +108,7 @@ class Source(Base):
     def request_lsp_completion(self, server_name, context):
         self.log('request completion')
 
-        self.vim.vars['deoplete#source#vim_lsp#_done'] = False
-        self.requested = True
+        # The bridge resets the previous request and its result itself.
         self.requested_context = context
         self.vim.call(
             'deoplete_vim_lsp#request',
@@ -149,6 +141,8 @@ class Source(Base):
         before_context = self.requested_context
         if not before_context:
             return False
+        if context['bufnr'] != before_context['bufnr']:
+            return False
 
         pattern = re.compile(r'\w+\Z')
         def keywd(typed):
@@ -175,7 +169,7 @@ class Source(Base):
         ]))
 
         # start input
-        if (not beforeKw) and afterKw:
+        if pattern.sub('', before_context['input']) != pattern.sub('', context['input']):
             return False
         if (beforeKw != afterKw) and (not afterKw.startswith(beforeKw)):
             return False
@@ -186,16 +180,3 @@ class Source(Base):
         if before_context['position'][2] > context['position'][2]:
             return False
         return True
-
-
-def create_context_to_vimlsp(context):
-    return {
-        'curpos': context['position'],
-        'lnum': context['position'][1],
-        'col': context['position'][2],
-        'bufnr': context['bufnr'],
-        'changedtick': context['changedtick'],
-        'typed': context['input'],
-        'filetype': context['filetype'],
-        'filepath': context['bufpath']
-    }
