@@ -10,6 +10,8 @@ let s:request = {}
 " Disown the pending request and reset the published result.
 function! deoplete_vim_lsp#clear() abort
     call timer_stop(s:timer)
+    " Callbacks may outlive the request; do not let them retain the buffer copy.
+    let s:request.lines = []
     let s:request = {}
     let g:deoplete#source#vim_lsp#_items = []
     let g:deoplete#source#vim_lsp#_incomplete = 0
@@ -24,6 +26,8 @@ function! deoplete_vim_lsp#request(server_name, complete_position) abort
         \ 'position': lsp#get_position(),
         \ 'complete_position': a:complete_position,
         \ 'input': strpart(getline('.'), 0, col('.') - 1),
+        \ 'changedtick': b:changedtick,
+        \ 'lines': getline(1, '$'),
         \ 'published': 0,
         \ }
     let s:request = l:request
@@ -38,11 +42,25 @@ function! deoplete_vim_lsp#request(server_name, complete_position) abort
         \ })
 endfunction
 
-" The cursor is still on the requested line and only grew the typed text.
+" The buffer is as requested, apart from text typed after the requested input.
 function! s:is_current(request) abort
-    return a:request.bufnr == bufnr('%')
-        \ && a:request.position.line + 1 == line('.')
-        \ && stridx(strpart(getline('.'), 0, col('.') - 1), a:request.input) == 0
+    let l:input = strpart(getline('.'), 0, col('.') - 1)
+    if a:request.bufnr != bufnr('%') || a:request.position.line + 1 != line('.')
+        \ || stridx(l:input, a:request.input) != 0
+        return 0
+    endif
+    if a:request.changedtick == b:changedtick
+        return 1
+    endif
+    " Typing changes the tick too. Undo the typed growth and compare the rest,
+    " so results (and their additional edits) are not reused after other edits.
+    let l:lines = getline(1, '$')
+    let l:lines[line('.') - 1] = a:request.input . strpart(getline('.'), strlen(l:input))
+    return l:lines ==# a:request.lines
+endfunction
+
+function! deoplete_vim_lsp#matches_context() abort
+    return !empty(s:request) && s:is_current(s:request)
 endfunction
 
 function! s:finish_request(request, items, incomplete, ...) abort

@@ -179,4 +179,7 @@ class Source(Base):
         # column
         if before_context['position'][2] > context['position'][2]:
             return False
+        if context['changedtick'] != before_context['changedtick']:
+            # Typing changes the tick too; the bridge checks the rest of the buffer.
+            return bool(self.vim.call('deoplete_vim_lsp#matches_context'))
         return True

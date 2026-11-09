@@ -32,7 +32,7 @@ Neovim tests also check original completion metadata and the resolve request.
 `test_bridge.vim` covers conversion and request state against captured requests:
 duplicate and out-of-order replies, clearing, buffer switches, the timeout and a
 late reply, malformed envelopes and results, and replies made stale by a changed
-prefix or line. `test_source.py` covers when the source reuses a result and when
+prefix, line, or any other buffer edit. `test_source.py` covers when the source reuses a result and when
 it sends a new request.
 
 Not covered: external snippet engines, supplementary Unicode characters requiring

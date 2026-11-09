@@ -19,6 +19,7 @@ class Vim:
         self.requests = []
         self.triggers = ['"', ':', '[', '.']
         self.clears = 0
+        self.context_matches = True
         self.auto_complete = True
         self.reply = None
 
@@ -34,6 +35,8 @@ class Vim:
             self.vars.update({'deoplete#source#vim_lsp#_items': [],
                               'deoplete#source#vim_lsp#_done': False,
                               'deoplete#source#vim_lsp#_incomplete': False})
+        if name == 'deoplete_vim_lsp#matches_context':
+            return self.context_matches
         if name == 'deoplete_vim_lsp#request':
             self.requests.append(args)
             if self.reply:
@@ -135,6 +138,19 @@ class SourceTests(unittest.TestCase):
         self.assertEqual(len(self.vim.requests), 1)
         self.assertEqual(self.source.gather_candidates(context('prin')), [])
         self.assertEqual(len(self.vim.requests), 2)
+
+    def test_edit_elsewhere_prevents_pending_and_cached_reuse(self):
+        for completed in [False, True]:
+            with self.subTest(completed=completed):
+                self.source.clean_state()
+                self.vim.requests.clear()
+                self.source.gather_candidates(context('"'))
+                if completed:
+                    self.respond()
+                self.vim.context_matches = False
+                self.assertEqual(self.source.gather_candidates(context('"m', changedtick=2)), [])
+                self.assertEqual(len(self.vim.requests), 2)
+                self.vim.context_matches = True
 
     def test_each_request_is_one_editor_call(self):
         self.source.gather_candidates(context('pri'))

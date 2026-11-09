@@ -207,6 +207,20 @@ class CompletionIntegrationTests(unittest.TestCase):
         self.assertEqual(len(self.requests('textDocument/completion')), initial_requests)
         self.accept(item, ['// schema', '', '  "matchDepTypes": ["dependencies"]'])
 
+    def test_edit_elsewhere_requests_fresh_completions(self):
+        item = {'label': 'matchDepTypes', 'textEdit': edit(2, 3, '"matchDepTypes"', line=1),
+                'additionalTextEdits': [edit(0, 6, 'after')]}
+        self.start([item], ['before', '  '])
+        self.nvim.current.window.cursor = (2, 1)
+        self.type('A"', '  "')
+        self.popup(item['label'])
+        requests = len(self.requests('textDocument/completion'))
+        self.nvim.current.buffer[0] = 'manual'
+        self.type('m', '  "m')
+        self.wait(lambda: len(self.requests('textDocument/completion')) > requests,
+                  'fresh completion request')
+        self.popup(item['label'])
+
     def test_mixed_replacement_starts(self):
         items = [{'label': 'red', 'textEdit': edit(0, 2, 'red')},
                  {'label': 'rgb', 'textEdit': edit(1, 2, 'rgb')}]

@@ -157,17 +157,23 @@ call assert_equal(0, g:deoplete#source#vim_lsp#_done)
 call s:reply(s:New, [{'label': 'newest'}])
 call assert_equal(['newest'], s:words())
 
-" Replacing or deleting the prefix, or leaving the line, makes a reply stale.
-for change in ['replace', 'delete', 'line']
+" Replacing or deleting the prefix, leaving the line, or editing anything else makes a reply stale.
+for change in ['replace', 'delete', 'line', 'tail', 'header']
   call setline(1, ['header', 'pri tail'])
   call cursor(2, 4)
   let s:Callback = s:start()
+  call assert_true(deoplete_vim_lsp#matches_context())
   if change ==# 'line'
     call cursor(1, 4)
+  elseif change ==# 'tail'
+    call setline(2, 'pri changed')
+  elseif change ==# 'header'
+    call setline(1, 'changed')
   else
     call setline(2, change ==# 'replace' ? 'pro tail' : 'pr tail')
     call cursor(2, change ==# 'replace' ? 4 : 3)
   endif
+  call assert_false(deoplete_vim_lsp#matches_context(), change)
   call s:reply(s:Callback, [{'label': 'stale'}])
   call s:assert_failed(change)
   call s:assert_recovers()
@@ -182,7 +188,15 @@ for prefix in ['pri', 'pré']
   call cursor(2, strlen(prefix) + 3)
   call s:reply(s:Callback, [{'label': 'print'}])
   call assert_equal(['print'], s:words())
+  " A published result stays reusable while only the prefix grows.
+  call setline(2, prefix . 'nti tail')
+  call cursor(2, strlen(prefix) + 4)
+  call assert_true(deoplete_vim_lsp#matches_context())
+  call setline(1, 'changed')
+  call assert_false(deoplete_vim_lsp#matches_context())
 endfor
+call deoplete_vim_lsp#clear()
+call assert_false(deoplete_vim_lsp#matches_context())
 
 " A pending request must not publish into another buffer, even before BufEnter is processed.
 let s:Callback = s:start()
