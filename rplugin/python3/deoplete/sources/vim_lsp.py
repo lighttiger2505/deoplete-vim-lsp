@@ -121,6 +121,7 @@ class Source(Base):
         self.vim.call(
             'deoplete_vim_lsp#request',
             server_name,
+            context['complete_position'],
         )
 
     def is_auto_complete(self):
