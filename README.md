@@ -37,6 +37,16 @@ call dein#add('prabirshrestha/vim-lsp')
 call dein#add('lighttiger2505/deoplete-vim-lsp')
 ```
 
+#### completion triggers
+
+Outside a keyword, completion starts on the trigger characters the language
+server advertises (`completionProvider.triggerCharacters`). To choose them
+yourself, for example to complete after any punctuation as older versions did:
+
+```vim
+call deoplete#custom#source('lsp', 'input_pattern', '[^\w\s]$')
+```
+
 #### setting example
 
 ```vim

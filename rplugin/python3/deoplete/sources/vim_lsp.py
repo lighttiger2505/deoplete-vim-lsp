@@ -12,39 +12,47 @@ class Source(Base):
         self.mark = '[lsp]'
         self.rank = 500
         self.is_volatile = True
-        self.input_pattern = r'[^\w\s]$'
         self.events = ['BufEnter']
         self.vars = {}
 
-        self.vim.vars['deoplete#source#vim_lsp#_items'] = []
-        self.vim.vars['deoplete#source#vim_lsp#_done'] = False
-        self.requested = False
-        self.requested_context = None
-
         self.server_names = None
         self.server_capabilities = {}
-        self.server_infos = {}
-        self.buf_changed = False
-
+        self.clean_state()
 
     def on_event(self, context):
         if context['event'] == 'BufEnter':
-            self.buf_changed = True
+            # Refetch so a restarted server's trigger characters take effect.
+            self.server_names = None
+            self.server_capabilities = {}
+            self.clean_state()
 
-    def gather_candidates(self, context):
-        if not self.server_names or self.buf_changed:
+    def get_input_pattern(self, filetype):
+        if self.input_pattern or self.input_patterns:
+            return Base.get_input_pattern(self, filetype)
+
+        triggers = [char for server_name in self.running_servers()
+                    for char in self.trigger_characters(server_name)]
+        if not triggers:
+            return ''
+        return '(?:' + '|'.join(re.escape(char) for char in triggers) + ')$'
+
+    def running_servers(self):
+        if not self.server_names:
             self.server_names = self.vim.call('lsp#get_allowed_servers')
-            self.buf_changed = False
 
+        running = []
         for server_name in self.server_names:
-            # Check the server's capabilities
             if server_name not in self.server_capabilities:
                 # Capabilities can only be obtained when the server is running.
                 if self.vim.call('lsp#get_server_status', server_name) != 'running':
                     continue
                 self.server_capabilities[server_name] = self.vim.call(
                     'lsp#get_server_capabilities', server_name)
+            running.append(server_name)
+        return running
 
+    def gather_candidates(self, context):
+        for server_name in self.running_servers():
             completion_provider = self.server_capabilities[server_name].get(
                     'completionProvider', False)
             if completion_provider is False or completion_provider is None:
@@ -57,10 +65,8 @@ class Source(Base):
         return []
 
     def clean_state(self):
-        self.vim.vars['deoplete#source#vim_lsp#_items'] = []
-        self.vim.vars['deoplete#source#vim_lsp#_done'] = False
-        self.requested = False
         self.requested_context = None
+        self.vim.call('deoplete_vim_lsp#clear')
 
     def sync_completion(self, server_name, context):
         self.request_lsp_completion(server_name, context)
@@ -77,7 +83,7 @@ class Source(Base):
         return []
 
     def async_completion(self, server_name, context):
-        if not self.requested:
+        if not self.match_context(context):
             self.request_lsp_completion(server_name, context)
             return []
 
@@ -88,12 +94,12 @@ class Source(Base):
             return []
 
         if self.vim.vars['deoplete#source#vim_lsp#_done']:
-            if self.match_context(context):
+            if (now_input == self.prev_input() or not
+                    self.vim.vars['deoplete#source#vim_lsp#_incomplete']):
                 items = self.vim.vars['deoplete#source#vim_lsp#_items']
                 return items
             else:
-                self.log('unmatch context')
-                self.clean_state()
+                self.log('incomplete response')
                 self.request_lsp_completion(server_name, context)
                 return []
 
@@ -102,12 +108,12 @@ class Source(Base):
     def request_lsp_completion(self, server_name, context):
         self.log('request completion')
 
-        self.vim.vars['deoplete#source#vim_lsp#_done'] = False
-        self.requested = True
+        # The bridge resets the previous request and its result itself.
         self.requested_context = context
         self.vim.call(
             'deoplete_vim_lsp#request',
             server_name,
+            context['complete_position'],
         )
 
     def is_auto_complete(self):
@@ -122,13 +128,11 @@ class Source(Base):
         self.vim.call('deoplete_vim_lsp#log', val)
 
     def trigger_characters(self, server_name):
-        default = ["."]
         capabilities = self.server_capabilities[server_name]
-        if capabilities:
-            trigger_characters = capabilities.get('trigger_characters', [])
-            trigger_characters.extend(default)
-            return trigger_characters
-        return default
+        completion_provider = capabilities.get('completionProvider')
+        if isinstance(completion_provider, dict):
+            return list(completion_provider.get('triggerCharacters', []))
+        return []
 
     def prev_input(self):
         return self.requested_context.get('input', '')
@@ -136,6 +140,8 @@ class Source(Base):
     def match_context(self, context):
         before_context = self.requested_context
         if not before_context:
+            return False
+        if context['bufnr'] != before_context['bufnr']:
             return False
 
         pattern = re.compile(r'\w+\Z')
@@ -163,7 +169,7 @@ class Source(Base):
         ]))
 
         # start input
-        if (not beforeKw) and afterKw:
+        if pattern.sub('', before_context['input']) != pattern.sub('', context['input']):
             return False
         if (beforeKw != afterKw) and (not afterKw.startswith(beforeKw)):
             return False
@@ -173,17 +179,7 @@ class Source(Base):
         # column
         if before_context['position'][2] > context['position'][2]:
             return False
+        if context['changedtick'] != before_context['changedtick']:
+            # Typing changes the tick too; the bridge checks the rest of the buffer.
+            return bool(self.vim.call('deoplete_vim_lsp#matches_context'))
         return True
-
-
-def create_context_to_vimlsp(context):
-    return {
-        'curpos': context['position'],
-        'lnum': context['position'][1],
-        'col': context['position'][2],
-        'bufnr': context['bufnr'],
-        'changedtick': context['changedtick'],
-        'typed': context['input'],
-        'filetype': context['filetype'],
-        'filepath': context['bufpath']
-    }
